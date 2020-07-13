@@ -1,4 +1,5 @@
 from pyspark.sql import SparkSession
+import pandas as pd
 
 
 def create_spark():
@@ -21,7 +22,7 @@ def read_from_s3(spark,months):
     :return:
     """
     i94_url = 's3://srk-data-eng-capstone/i94/i94_{month}16_sub.sas7bdat'
-    i94=pd.read_sas(i94_url, 'sas7bdat',encoding="ISO-8859-1")
+    i94=pd.read_sas(i94_url, 'sas7bdat',encoding="ISO-8859-1").drop_duplicates()
     i94.to_csv('test.csv')
     df_spark = spark.read.option('header', 'true').csv('test.csv')
 
