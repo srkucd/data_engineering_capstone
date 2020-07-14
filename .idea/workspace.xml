@@ -3,6 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="a7ef7678-c417-41f3-b9fc-cc3cbb234d51" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/Capstone Project.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/Capstone Project.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/nosql.py" beforeDir="false" afterPath="$PROJECT_DIR$/nosql.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -15,8 +16,11 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/nosql.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="345">
-              <caret line="23" column="62" lean-forward="true" selection-start-line="23" selection-start-column="62" selection-end-line="23" selection-end-column="62" />
+            <state relative-caret-position="510">
+              <caret line="34" lean-forward="true" selection-start-line="34" selection-end-line="34" />
+              <folding>
+                <element signature="e#0#36#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -125,8 +129,11 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/nosql.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="345">
-          <caret line="23" column="62" lean-forward="true" selection-start-line="23" selection-start-column="62" selection-end-line="23" selection-end-column="62" />
+        <state relative-caret-position="510">
+          <caret line="34" lean-forward="true" selection-start-line="34" selection-end-line="34" />
+          <folding>
+            <element signature="e#0#36#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
