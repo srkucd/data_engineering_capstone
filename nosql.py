@@ -1,8 +1,9 @@
 from pyspark.sql import SparkSession
 import pandas as pd
+import uuid
 import os
 
-sql = '''SELECT cicid, i94yr, i94mon, i94cit, i94res, i94port,
+sql = '''SELECT id_, cicid, i94yr, i94mon, i94cit, i94res, i94port,
        arrdate, i94mode, i94addr, depdate, i94bir, i94visa,
        count, dtadfile, visapost, occup, entdepa, entdepd,
        entdepu, matflag, biryear, dtaddto, gender, insnum,
@@ -13,7 +14,7 @@ spark = SparkSession.builder. \
     enableHiveSupport().getOrCreate()
 
 
-def backup(years, months):
+def load_data(years, months):
     """
     Create parquet file as local and S3 backup, which can make R & W data easier.
 
@@ -23,12 +24,27 @@ def backup(years, months):
     """
     i94_url = 's3://srk-data-eng-capstone/i94/i94_{month}{year}_sub.sas7bdat'.format(month=months, year=str(years))
     csv_filename = '{year}_{month}.csv'.format(year=years, month=months)
+    parquet_filename = str(years) + '_' + months + '.parquet'
+
     i94 = pd.read_sas(i94_url, 'sas7bdat',
                       encoding="ISO-8859-1").drop_duplicates()
-    i94.to_csv(csv_filename)
-    df_spark = spark.read.option('header', 'true').csv(csv_filename)
-    df_spark.createOrReplaceTempView('i94')
-    data = spark.sql(sql)
-    data.write.parquet('{year}_{month}.parquet'.format(year=years, month=months), mode='overwrite')
-    os.remove('{year}_{month}.csv'.format(year=years, month=months))
+    i94['id_'] = pd.Series([uuid.uuid1() for each in range(len(i94))])
+
+    while True:
+        if os.path.isdir(parquet_filename):
+            break
+        else:
+            i94.to_csv(csv_filename)
+            df_spark = spark.read.option('header', 'true').csv(csv_filename)
+            df_spark.createOrReplaceTempView('i94')
+            data = spark.sql(sql)
+            data.write.parquet(parquet_filename, mode='overwrite')
+            os.system('aws s3 cp {filename} s3://i94-backup --recursive'.format(filename=parquet_filename))
+            break
+
+    while True:
+        try:
+            os.remove('{year}_{month}.csv'.format(year=str(years), month=months))
+        except:
+            break
 
