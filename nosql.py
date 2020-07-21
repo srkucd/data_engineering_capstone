@@ -2,6 +2,9 @@ from pyspark.sql import SparkSession
 import pandas as pd
 import uuid
 import os
+from cassandra.cluster import Cluster
+from ssl import SSLContext, PROTOCOL_TLSv1, CERT_REQUIRED
+from cassandra.auth import PlainTextAuthProvider
 
 sql = '''SELECT id_, cicid, i94yr, i94mon, i94cit, i94res, i94port,
        arrdate, i94mode, i94addr, depdate, i94bir, i94visa,
@@ -34,7 +37,7 @@ def load_data(years, months):
         if os.path.isdir(parquet_filename):
             break
         else:
-            i94.to_csv(csv_filename)
+            i94.to_csv(csv_filename, index=False)
             df_spark = spark.read.option('header', 'true').csv(csv_filename)
             df_spark.createOrReplaceTempView('i94')
             data = spark.sql(sql)
