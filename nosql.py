@@ -6,12 +6,6 @@ from cassandra.cluster import Cluster
 from ssl import SSLContext, PROTOCOL_TLSv1, CERT_REQUIRED
 from cassandra.auth import PlainTextAuthProvider
 
-sql = '''SELECT id_, cicid, i94yr, i94mon, i94cit, i94res, i94port,
-       arrdate, i94mode, i94addr, depdate, i94bir, i94visa,
-       count, dtadfile, visapost, occup, entdepa, entdepd,
-       entdepu, matflag, biryear, dtaddto, gender, insnum,
-       airline, admnum, fltno, visatype FROM i94'''
-
 spark = SparkSession.builder. \
     config('spark.jars.packages', 'saurfang:spark.sas7bdat:2.0.0-s_2.11'). \
     enableHiveSupport().getOrCreate()
@@ -29,14 +23,19 @@ def load_data(years, months):
     csv_filename = '{year}_{month}.csv'.format(year=years, month=months)
     parquet_filename = str(years) + '_' + months + '.parquet'
 
-    i94 = pd.read_sas(i94_url, 'sas7bdat',
-                      encoding="ISO-8859-1").drop_duplicates()
-    i94['id_'] = pd.Series([uuid.uuid1() for each in range(len(i94))])
-
     while True:
         if os.path.isdir(parquet_filename):
             break
         else:
+            sql = '''SELECT id_, cicid, i94yr, i94mon, i94cit, i94res, i94port,
+                   arrdate, i94mode, i94addr, depdate, i94bir, i94visa,
+                   count, dtadfile, visapost, occup, entdepa, entdepd,
+                   entdepu, matflag, biryear, dtaddto, gender, insnum,
+                   airline, admnum, fltno, visatype FROM i94'''
+
+            i94 = pd.read_sas(i94_url, 'sas7bdat',
+                              encoding="ISO-8859-1").drop_duplicates()
+            i94['id_'] = pd.Series([uuid.uuid1() for each in range(len(i94))])
             i94.to_csv(csv_filename, index=False)
             df_spark = spark.read.option('header', 'true').csv(csv_filename)
             df_spark.createOrReplaceTempView('i94')
