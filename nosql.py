@@ -55,6 +55,12 @@ def load_data(years, months):
 
 
 def cassandra(years, months):
+    """
+
+    :param years: which year you decide to choose, in our beta version, only 2016 available.
+    :param months: months: which month you decide to choose
+    :return:
+    """
     ssl_context = SSLContext(PROTOCOL_TLSv1)
     ssl_context.load_verify_locations('AmazonRootCA1.pem')
     ssl_context.verify_mode = CERT_REQUIRED
