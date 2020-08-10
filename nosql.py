@@ -6,6 +6,8 @@ from cassandra.cluster import Cluster
 from ssl import SSLContext, PROTOCOL_TLSv1, CERT_REQUIRED
 from cassandra.auth import PlainTextAuthProvider
 from cassandra import ConsistencyLevel
+from time import sleep
+
 
 def sparks():
     spark = SparkSession.builder. \
@@ -88,6 +90,8 @@ def cassandra(years, months):
                                                           PRIMARY KEY(id_)
                     ) """
     session.execute(create_table)
+    sleep(10)
+    print('Creating tables...')
 
     origin_sql = """INSERT INTO "i94".i94 ("cicid","i94yr","i94mon","i94cit","i94res","i94port","arrdate","i94mode","i94addr","depdate",
                                   "i94bir","i94visa","count","dtadfile","visapost","occup","entdepa","entdepd","entdepu","matflag",
