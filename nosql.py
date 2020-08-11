@@ -93,6 +93,13 @@ def cassandra(years, months):
     sleep(10)
     print('Creating tables...')
 
+def inserting(years,months):
+    """
+    
+    :param years:
+    :param months:
+    :return:
+    """
     origin_sql = """INSERT INTO "i94".i94 ("cicid","i94yr","i94mon","i94cit","i94res","i94port","arrdate","i94mode","i94addr","depdate",
                                   "i94bir","i94visa","count","dtadfile","visapost","occup","entdepa","entdepd","entdepu","matflag",
                                   "biryear","dtaddto","gender","insnum","airline","admnum","fltno","visatype","id_")
