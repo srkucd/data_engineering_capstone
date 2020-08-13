@@ -56,7 +56,7 @@ def load_data(years, months):
             break
 
 
-def cassandra(years, months):
+def cassandra(user,passcode):
     """
 
     :param years: which year you decide to choose, in our beta version, only 2016 available.
@@ -66,8 +66,8 @@ def cassandra(years, months):
     ssl_context = SSLContext(PROTOCOL_TLSv1)
     ssl_context.load_verify_locations('AmazonRootCA1.pem')
     ssl_context.verify_mode = CERT_REQUIRED
-    auth_provider = PlainTextAuthProvider(username=str(config['APACHE_CASSANDRA_CREDS']['CASSANDRA_USERNAME']),
-                                          password=str(config['APACHE_CASSANDRA_CREDS']['CASSANDRA_PASSWORD']))
+    auth_provider = PlainTextAuthProvider(username=str(user),
+                                          password=str(passcode))
     cluster = Cluster(['cassandra.eu-west-1.amazonaws.com'], ssl_context=ssl_context, auth_provider=auth_provider,
                       port=9142)
 
@@ -92,10 +92,11 @@ def cassandra(years, months):
     session.execute(create_table)
     sleep(10)
     print('Creating tables...')
+    return session
 
-def inserting(years,months):
+def inserting(years,months,session):
     """
-    
+
     :param years:
     :param months:
     :return:
