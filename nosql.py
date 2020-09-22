@@ -1,181 +1,110 @@
-from pyspark.sql import SparkSession
+import configparser
 import pandas as pd
-import uuid
 import os
-from cassandra.cluster import Cluster
-from ssl import SSLContext, PROTOCOL_TLSv1, CERT_REQUIRED
-from cassandra.auth import PlainTextAuthProvider
-from cassandra import ConsistencyLevel
+import boto3
+import uuid
+from pyspark.sql import types as T
 from time import sleep
 
+import pyspark
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import udf
+from pyspark.sql import SQLContext
+from pyspark.sql import types as T
+from pyspark.sql.types import *
+from pyspark import SparkContext
 
-def sparks():
+
+def spark_generator():
     spark = SparkSession.builder. \
-        config('spark.jars.packages', 'saurfang:spark.sas7bdat:2.0.0-s_2.11'). \
-        enableHiveSupport().getOrCreate()
+        config("spark.jars.packages", "saurfang:spark-sas7bdat:2.0.0-s_2.11") \
+        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+        .config("spark.driver.memory", "15g") \
+        .enableHiveSupport().getOrCreate()
+    spark.conf.set("spark.sql.execution.arrow.enabled", "true")
     return spark
 
-def load_data(years, months):
-    """
-    Create parquet file as local and S3 backup, which can make R & W data easier.
 
-    :param years: which year you decide to choose, in our beta version, only 2016 available.
-    :param months: which month you decide to choose
-    :return:
-    """
-    i94_url = 's3://srk-data-eng-capstone/i94/i94_{month}{year}_sub.sas7bdat'.format(month=months, year=str(years))
-    csv_filename = '{year}_{month}.csv'.format(year=years, month=months)
-    parquet_filename = str(years) + '_' + months + '.parquet'
-    spark=sparks()
+def immigration_data(year, month):
+    i94 = pd.read_sas(('i94_' + str(month) + str(year) + '_sub.sas7bdat'), 'sas7bdat',
+                      encoding="ISO-8859-1").drop_duplicates()
+    i94['id_'] = pd.Series([str(uuid.uuid1()) for each in range(len(i94))])
+    i94['arrival_date'] = pd.to_timedelta(i94['arrdate'], unit='D') + pd.Timestamp('1960-1-1')
+    spark = spark_generator()
+    i94 = spark.createDataFrame(i94)
+    i94.createOrReplaceTempView('i94')
+    sql = """SELECT i94yr AS year,i94mon AS month,i94cit AS citizenship,
+              i94res AS resident,i94port AS port,
+              arrival_date,i94mode AS mode,
+              i94addr AS us_state,depdate AS depart_date,
+              i94bir AS age,i94visa visa_category,
+              dtadfile AS date_added,visapost AS visa_issued_by,
+              occup AS occupation,entdepa AS arrival_flag,
+              entdepd AS depart_flag,entdepu AS update_flag,
+              matflag AS match_arrival_depart_flag,
+              biryear AS birth_year,dtaddto AS allowed_date,
+              gender,insnum AS ins_number,airline,
+              admnum AS admission_number,
+              fltno AS flight_no,visatype,id_
+              FROM i94;
+       """
+    i94_df = spark.sql(sql)
+    i94_df.write.mode('overwrite').partitionBy('month', 'year').parquet('parquet_data/' + str(month) + '_' + str(year))
+    print('i94 parquet generation complete.-' + str(month) + '_' + str(year))
 
-    while True:
-        if os.path.isdir(parquet_filename):
-            break
-        else:
-            sql = '''SELECT id_, cicid, i94yr, i94mon, i94cit, i94res, i94port,
-                   arrdate, i94mode, i94addr, depdate, i94bir, i94visa,
-                   count, dtadfile, visapost, occup, entdepa, entdepd,
-                   entdepu, matflag, biryear, dtaddto, gender, insnum,
-                   airline, admnum, fltno, visatype FROM i94'''
 
-            i94 = pd.read_sas(i94_url, 'sas7bdat',
-                              encoding="ISO-8859-1").drop_duplicates()
-            i94['id_'] = pd.Series([uuid.uuid1() for each in range(len(i94))])
-            i94.to_csv(csv_filename, index=False)
-            df_spark = spark.read.option('header', 'true').csv(csv_filename)
-            df_spark.createOrReplaceTempView('i94')
-            data = spark.sql(sql)
-            data.write.parquet(parquet_filename, mode='overwrite')
-            os.system('aws s3 cp {filename} s3://i94-backup --recursive'.format(filename=parquet_filename))
-            break
+def airport():
+    airport_codes_url = 's3://srk-data-eng-capstone/airport-codes_csv.csv'
+    airport_codes = pd.read_csv(airport_codes_url)
+    spark = spark_generator()
+    airport_codes = spark.createDataFrame(airport_codes)
+    airport_codes.createOrReplaceTempView('airports')
+    sql = """SELECT ident, type, name, elevation_ft, continent, 
+                iso_country, iso_region, municipality, gps_code, iata_code AS airport_code, coordinates
+         FROM airports WHERE iata_code IS NOT NULL
+         UNION
+         SELECT ident, type, name, elevation_ft, continent,
+                iso_country, iso_region, municipality, gps_code, local_code AS airport_code, coordinates
+         FROM airports WHERE local_code IS NOT NULL"""
+    airports = spark.sql(sql)
+    airports.write.mode('overwrite').parquet('parquet_data/airports')
+    print('Airport parquet generation complete.')
 
-    while True:
+
+def us_cities():
+    us_city_demographics_url = 's3://srk-data-eng-capstone/us-cities-demographics.csv'
+    us_city_demographics = pd.read_csv(us_city_demographics_url, sep=';')
+    spark = spark_generator()
+    us_city_demographics = spark.createDataFrame(us_city_demographics)
+    us_city_demographics.createOrReplaceTempView('us_cities')
+    sql = """SELECT city, `Median Age` AS median_age, `Male Population` AS male_population,
+              `Female Population` AS female_population, `Total Population` AS population,
+              `Number of Veterans` AS num_veterans, `Foreign-born` AS foreign_born, `Average Household Size` AS avg_household_size,
+              `State Code` AS state, race, count
+       FROM us_cities"""
+    us_cities = spark.sql(sql)
+    us_cities.write.mode('overwrite').parquet('parquet_data/us_cities')
+    print('US cities parquet generation complete.')
+
+
+def mapping(names):
+    origin = open('mappings/{}.txt'.format(names), 'r')
+    code = []
+    name = []
+    for each in origin:
+        line = " ".join(each.split())
         try:
-            os.remove('{year}_{month}.csv'.format(year=str(years), month=months))
+            code.append(int(line[:line.index('=')]))
         except:
-            break
+            code.append(line[1:line.index('=') - 1])
+        name.append(line[line.index('=') + 2:-1])
+    origin.close()
+    col_code = names + '_code'
+    col_name = names + '_name'
+    df = pd.DataFrame(list(zip(code, name)), columns=[col_code, col_name])
+    spark = spark_generator()
+    df = spark.createDataFrame(df)
+    df.write.mode('overwrite').parquet('parquet_data/' + names)
+    print(names + ' parquet generation complete.')
 
 
-def cassandra(user,passcode):
-    """
-
-    :param years: which year you decide to choose, in our beta version, only 2016 available.
-    :param months: months: which month you decide to choose
-    :return:
-    """
-    ssl_context = SSLContext(PROTOCOL_TLSv1)
-    ssl_context.load_verify_locations('AmazonRootCA1.pem')
-    ssl_context.verify_mode = CERT_REQUIRED
-    auth_provider = PlainTextAuthProvider(username=str(user),
-                                          password=str(passcode))
-    cluster = Cluster(['cassandra.eu-west-1.amazonaws.com'], ssl_context=ssl_context, auth_provider=auth_provider,
-                      port=9142)
-
-    session = cluster.connect()
-    create_keyspace = """CREATE KEYSPACE IF NOT EXISTS "i94"
-                       WITH REPLICATION={'class':'SingleRegionStrategy'}"""
-    session.execute(create_keyspace)
-
-    create_table = """CREATE TABLE IF NOT EXISTS "i94".i94 (
-                                                          cicid DOUBLE,i94yr DOUBLE,i94mon DOUBLE,
-                                                          i94cit DOUBLE,i94res DOUBLE,i94port TEXT,
-                                                          arrdate DOUBLE,i94mode DOUBLE,i94addr TEXT,
-                                                          depdate DOUBLE,i94bir DOUBLE,i94visa DOUBLE,
-                                                          count DOUBLE,dtadfile DOUBLE,visapost TEXT,
-                                                          occup TEXT,entdepa TEXT,entdepd TEXT,
-                                                          entdepu TEXT,matflag TEXT,biryear DOUBLE,
-                                                          dtaddto TEXT,gender TEXT,insnum TEXT,
-                                                          airline TEXT,admnum DOUBLE,fltno TEXT,
-                                                          visatype TEXT,id_ TEXT,
-                                                          PRIMARY KEY(id_)
-                    ) """
-    session.execute(create_table)
-    sleep(10)
-    print('Creating tables...')
-    return session
-
-def inserting(years,months,session):
-    """
-
-    :param years:
-    :param months:
-    :return:
-    """
-    origin_sql = """INSERT INTO "i94".i94 ("cicid","i94yr","i94mon","i94cit","i94res","i94port","arrdate","i94mode","i94addr","depdate",
-                                  "i94bir","i94visa","count","dtadfile","visapost","occup","entdepa","entdepd","entdepu","matflag",
-                                  "biryear","dtaddto","gender","insnum","airline","admnum","fltno","visatype","id_")
-                                  VALUES ({0},{1},{2},{3},{4},'{5}',{6},{7},'{8}',{9},
-                                          {10},{11},{12},{13},'{14}','{15}','{16}','{17}','{18}','{19}',
-                                          {20},'{21}','{22}','{23}','{24}',{25},'{26}','{27}','{28}')"""
-
-    total_length = len(pd.read_csv('{}_{}.csv').format(year=years, month=months))
-
-    with open('{}_{}.csv').format(year=years, month=months), 'r' as csv:
-        # Ignore the first line, which is column head.
-        csv = iter(csv)
-        next(csv)
-        counts = 0
-        for each in csv:
-            lists = []
-            columns = each.split(',')
-            cicid = columns[0]
-            i94yr = columns[1]
-            i94mon = columns[2]
-            i94cit = columns[3]
-            i94res = columns[4]
-            i94port = columns[5]
-            arrdate = columns[6]
-            i94mode = columns[7]
-            i94addr = columns[8]
-            depdate = columns[9]
-            i94bir = columns[10]
-            i94visa = columns[11]
-            count = columns[12]
-            dtadfile = columns[13]
-            visapost = columns[14]
-            occup = columns[15]
-            entdepa = columns[16]
-            entdepd = columns[17]
-            entdepu = columns[18]
-            matflag = columns[19]
-            biryear = columns[20]
-            dtaddto = columns[21]
-            gender = columns[22]
-            insnum = columns[23]
-            airline = columns[24]
-            admnum = columns[25]
-            fltno = columns[26]
-            visatype = columns[27]
-            id_ = columns[28]
-
-            original_list = [cicid, i94yr, i94mon, i94cit, i94res, i94port, arrdate, i94mode, i94addr, depdate, i94bir,
-                             i94visa,
-                             count, dtadfile, visapost, occup, entdepa, entdepd, entdepu, matflag, biryear, dtaddto,
-                             gender, insnum,
-                             airline, admnum, fltno, visatype, id_]
-
-            for each in original_list:
-                try:
-                    each = float(each)
-                    lists.append(each)
-                except:
-                    if each == '':
-                        each = None
-                        lists.append(each)
-                    else:
-                        lists.append(each)
-                        continue
-
-            formated_sql = origin_sql.format(lists[0], lists[1], lists[2], lists[3], lists[4], lists[5], lists[6],
-                                             lists[7], lists[8], lists[9],
-                                             lists[10], lists[11], lists[12], lists[13], lists[14], lists[15],
-                                             lists[16], lists[17], lists[18], lists[19],
-                                             lists[20], lists[21], lists[22], lists[23], lists[24], lists[25],
-                                             lists[26], lists[27], lists[28])
-
-            sql = session.prepare(formated_sql)
-            sql.consistency_level = ConsistencyLevel.LOCAL_QUORUM
-            session.execute(sql)
-
-            print('Import row{} complete.'.format(counts) + '{} remaining.'.format(total_length - counts))
-            counts += 1
