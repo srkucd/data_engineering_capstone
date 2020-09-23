@@ -108,3 +108,17 @@ def mapping(names):
     print(names + ' parquet generation complete.')
 
 
+def upload_files(path,bucket):
+    session = boto3.Session(
+        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+        region_name='eu-west-1'
+    )
+    s3 = session.resource('s3')
+    bucket = s3.Bucket(bucket)
+
+    for subdir, dirs, files in os.walk(path):
+        for file in files:
+            full_path = os.path.join(subdir, file)
+            with open(full_path, 'rb') as data:
+                bucket.put_object(Key=full_path[len(path) + 1:], Body=data)
