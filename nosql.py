@@ -16,8 +16,12 @@ from pyspark import SparkContext
 
 
 def spark_generator():
+    """
+    create a spark session
+    :return:spark session
+    """
     spark = SparkSession.builder. \
-        config("spark.jars.packages", "saurfang:spark-sas7bdat:2.0.0-s_2.11") \
+        config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:2.7.0") \
         .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
         .config("spark.driver.memory", "15g") \
         .enableHiveSupport().getOrCreate()
@@ -26,6 +30,12 @@ def spark_generator():
 
 
 def immigration_data(year, month):
+    """
+    create parquet file of immigration data group by year and month
+    :param year: group by which year
+    :param month: group by which month (alphabetic abbreviation)
+    :return:parquet file of immigration data
+    """
     i94 = pd.read_sas(('i94_' + str(month) + str(year) + '_sub.sas7bdat'), 'sas7bdat',
                       encoding="ISO-8859-1").drop_duplicates()
     i94['id_'] = pd.Series([str(uuid.uuid1()) for each in range(len(i94))])
@@ -49,11 +59,19 @@ def immigration_data(year, month):
               FROM i94;
        """
     i94_df = spark.sql(sql)
-    i94_df.write.mode('overwrite').partitionBy('month', 'year').parquet('parquet_data/' + str(month) + '_' + str(year))
+    i94_df.write.mode('overwrite') \
+        .partitionBy('month', 'year') \
+        .format('parquet') \
+        .option("compression", "gzip") \
+        .save('parquet_data/' + str(month) + '_' + str(year) + '.parquet')
     print('i94 parquet generation complete.-' + str(month) + '_' + str(year))
 
 
 def airport():
+    """
+    create parquet file of airport data
+    :return: parquet file of airport data
+    """
     airport_codes_url = 's3://srk-data-eng-capstone/airport-codes_csv.csv'
     airport_codes = pd.read_csv(airport_codes_url)
     spark = spark_generator()
@@ -67,11 +85,18 @@ def airport():
                 iso_country, iso_region, municipality, gps_code, local_code AS airport_code, coordinates
          FROM airports WHERE local_code IS NOT NULL"""
     airports = spark.sql(sql)
-    airports.write.mode('overwrite').parquet('parquet_data/airports')
+    airports.write.mode('overwrite') \
+        .format('parquet') \
+        .option("compression", "gzip") \
+        .save('parquet_data/airports.parquet')
     print('Airport parquet generation complete.')
 
 
 def us_cities():
+    """
+    create parquet file of  US cities
+    :return: parquet file of US cities
+    """
     us_city_demographics_url = 's3://srk-data-eng-capstone/us-cities-demographics.csv'
     us_city_demographics = pd.read_csv(us_city_demographics_url, sep=';')
     spark = spark_generator()
@@ -83,11 +108,19 @@ def us_cities():
               `State Code` AS state, race, count
        FROM us_cities"""
     us_cities = spark.sql(sql)
-    us_cities.write.mode('overwrite').parquet('parquet_data/us_cities')
+    us_cities.write.mode('overwrite') \
+        .format('parquet') \
+        .option('compression', 'gzip') \
+        .save('parquet_data/us_cities.parquet')
     print('US cities parquet generation complete.')
 
 
 def mapping(names):
+    """
+    create parquet files for mapping tables
+    :param names:mapping table name
+    :return:parquet files of mapping tables
+    """
     origin = open('mappings/{}.txt'.format(names), 'r')
     code = []
     name = []
@@ -104,21 +137,23 @@ def mapping(names):
     df = pd.DataFrame(list(zip(code, name)), columns=[col_code, col_name])
     spark = spark_generator()
     df = spark.createDataFrame(df)
-    df.write.mode('overwrite').parquet('parquet_data/' + names)
+    df.write.mode('overwrite') \
+        .format('parquet') \
+        .option('compression', 'gzip') \
+        .save('parquet_data/' + names + '.parquet')
     print(names + ' parquet generation complete.')
 
 
-def upload_files(path,bucket):
-    session = boto3.Session(
-        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
-        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
-        region_name='eu-west-1'
-    )
-    s3 = session.resource('s3')
-    bucket = s3.Bucket(bucket)
+def upload_files(filename):
+    """
+    upload parquet file to S3
+    :param filename: parquet filename
+    :return:
+    """
+    config = configparser.ConfigParser()
+    config.read('iam.cfg')
+    os.environ['AWS_ACCESS_KEY_ID'] = config['AWS_CREDS']['AWS_ACCESS_KEY_ID']
+    os.environ['AWS_SECRET_ACCESS_KEY'] = config['AWS_CREDS']['AWS_SECRET_ACCESS_KEY']
 
-    for subdir, dirs, files in os.walk(path):
-        for file in files:
-            full_path = os.path.join(subdir, file)
-            with open(full_path, 'rb') as data:
-                bucket.put_object(Key=full_path[len(path) + 1:], Body=data)
+    os.system('aws s3 cp parquet_data/{}.parquet s3://i94-backup --recursive'.format(filename))
+    print(filename + ' is uploaded to bucket i94-backup')
