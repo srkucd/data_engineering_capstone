@@ -2,8 +2,17 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a7ef7678-c417-41f3-b9fc-cc3cbb234d51" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/Capstone Project.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/Capstone Project.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nosql.py" beforeDir="false" afterPath="$PROJECT_DIR$/nosql.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.ipynb_checkpoints/Capstone Project-checkpoint.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Capstone Project.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/derby.log" beforeDir="false" afterPath="$PROJECT_DIR$/derby.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metastore_db/db.lck" beforeDir="false" afterPath="$PROJECT_DIR$/metastore_db/db.lck" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metastore_db/log/log.ctrl" beforeDir="false" afterPath="$PROJECT_DIR$/metastore_db/log/log.ctrl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metastore_db/log/log1.dat" beforeDir="false" afterPath="$PROJECT_DIR$/metastore_db/log/log1.dat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metastore_db/log/logmirror.ctrl" beforeDir="false" afterPath="$PROJECT_DIR$/metastore_db/log/logmirror.ctrl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metastore_db/seg0/c180.dat" beforeDir="false" afterPath="$PROJECT_DIR$/metastore_db/seg0/c180.dat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metastore_db/seg0/c191.dat" beforeDir="false" afterPath="$PROJECT_DIR$/metastore_db/seg0/c191.dat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metastore_db/seg0/c1a1.dat" beforeDir="false" afterPath="$PROJECT_DIR$/metastore_db/seg0/c1a1.dat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/metastore_db/seg0/c1b1.dat" beforeDir="false" afterPath="$PROJECT_DIR$/metastore_db/seg0/c1b1.dat" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -17,7 +26,7 @@
         <entry file="file://$PROJECT_DIR$/nosql.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="355">
-              <caret line="150" column="13" lean-forward="true" selection-start-line="150" selection-start-column="13" selection-end-line="150" selection-end-column="13" />
+              <caret line="150" column="12" selection-start-line="150" selection-start-column="12" selection-end-line="150" selection-end-column="12" />
               <folding>
                 <element signature="e#0#19#0" expanded="true" />
               </folding>
@@ -120,7 +129,21 @@
       <option name="project" value="LOCAL" />
       <updated>1596573850032</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="data upload complete, going to quality check tomorrow.">
+      <created>1601071889247</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1601071889247</updated>
+    </task>
+    <task id="LOCAL-00003" summary="data upload complete, going to quality check tomorrow.">
+      <created>1601071922780</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1601071922780</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -188,7 +211,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Removing prototype to python script" />
-    <option name="LAST_COMMIT_MESSAGE" value="Removing prototype to python script" />
+    <MESSAGE value="data upload complete, going to quality check tomorrow." />
+    <option name="LAST_COMMIT_MESSAGE" value="data upload complete, going to quality check tomorrow." />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/Capstone Project.ipynb">
@@ -200,7 +224,7 @@
     <entry file="file://$PROJECT_DIR$/nosql.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="355">
-          <caret line="150" column="13" lean-forward="true" selection-start-line="150" selection-start-column="13" selection-end-line="150" selection-end-column="13" />
+          <caret line="150" column="12" selection-start-line="150" selection-start-column="12" selection-end-line="150" selection-end-column="12" />
           <folding>
             <element signature="e#0#19#0" expanded="true" />
           </folding>
